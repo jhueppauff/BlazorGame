@@ -1,0 +1,97 @@
+﻿@using BlazorGame.Model;
+
+@for (int i = 0; i < 8; i++)
+{
+    int localI = i;
+    <div class="row">
+        @for (int j = 0; j < 8; j++)
+        {
+            int localJ = j;
+            var token = blackTokens.FirstOrDefault(n => n.Column == j && n.Row == i);
+            if (token == null)
+            {
+                token = whiteTokens.FirstOrDefault(n => n.Column == j && n.Row == i);
+            }
+
+            bool canMoveHere = rowsPossible.Contains(i) && columnsPossible.Contains(j);
+
+            <div @onclick="() => MoveToken(localI, localJ)" class="cell @(canMoveHere ? "active" : "")">
+                @if (token != null)
+                {
+                    <div @onclick="() => { activeToken = token; EvaluateTokenMoveOptions();}"
+             class="token @token.Color @(token == activeToken ? "active" : "")"></div>
+                }
+            </div>
+        }
+    </div>
+}
+
+
+
+@code {
+    private List<Token> whiteTokens = new();
+    private List<Token> blackTokens = new();
+    private List<int> rowsPossible = new();
+    private List<int> columnsPossible = new();
+    private Token activeToken;
+
+    protected override void OnInitialized()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = (i + 1) % 2; j < 8; j += 2)
+            {
+                blackTokens.Add(new Token()
+                    {
+                        Color = Color.Black,
+                        Column = j,
+                        Row = i,
+                        Direction = Direction.Down
+                    });
+            }
+        }
+
+        for (int i = 5; i < 8; i++)
+        {
+            for (int j = (i + 1) % 2; j < 8; j += 2)
+            {
+                whiteTokens.Add(new Token()
+                    {
+                        Color = Color.White,
+                        Column = j,
+                        Row = i,
+                        Direction = Direction.Up
+                    });
+            }
+        }
+    }
+
+    void EvaluateTokenMoveOptions()
+    {
+        rowsPossible.Clear();
+        columnsPossible.Clear();
+        if (activeToken != null)
+        {
+            rowsPossible.Add(activeToken.Row + (1 * (activeToken.Direction == Direction.Down ? 1 : -1)));
+
+            columnsPossible.Add(activeToken.Column - 1);
+            columnsPossible.Add(activeToken.Column + 1);
+        }
+    }
+
+    void MoveToken(int row, int column)
+    {
+        bool canMoveHere = rowsPossible.Contains(row) && columnsPossible.Contains(column);
+
+        if (!canMoveHere)
+        {
+            return;
+        }
+        else
+        {
+            activeToken.Column = column;
+            activeToken.Row = row;
+            activeToken = null;
+        }
+    }
+}
