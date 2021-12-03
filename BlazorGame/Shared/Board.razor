@@ -1,5 +1,6 @@
 ﻿@using BlazorGame.Model;
 
+<h4>Round: @turnCount | Black Tokens : @beatenBlackToken | White Tokens : @beatenWhiteToken</h4>
 @for (int i = 0; i < 8; i++)
 {
     int localI = i;
@@ -13,27 +14,29 @@
                 token = whiteTokens.FirstOrDefault(n => n.Column == j && n.Row == i);
             }
 
-            bool canMoveHere = rowsPossible.Contains(i) && columnsPossible.Contains(j);
+            bool canMoveHere = cellsPossible.Contains((i, j));
 
             <div @onclick="() => MoveToken(localI, localJ)" class="cell @(canMoveHere ? "active" : "")">
                 @if (token != null)
                 {
-                    <div @onclick="() => { activeToken = token; EvaluateTokenMoveOptions();}"
-             class="token @token.Color @(token == activeToken ? "active" : "")"></div>
+                    <div @onclick="() => { OnClickToken(token);}" class="token @token.Color @(token == activeToken ? "active" : "")">
+                        <span>@(token.Direction == Direction.Both ? "Q" : "")</span>
+                    </div>
                 }
             </div>
         }
     </div>
 }
 
-
-
 @code {
     private List<Token> whiteTokens = new();
     private List<Token> blackTokens = new();
-    private List<int> rowsPossible = new();
-    private List<int> columnsPossible = new();
+    private List<(int row, int column)> cellsPossible = new();
     private Token activeToken;
+    private Color activeTurn = Color.White;
+    private int turnCount = 0;
+    private int beatenWhiteToken = 0;
+    private int beatenBlackToken = 0;
 
     protected override void OnInitialized()
     {
@@ -68,20 +71,62 @@
 
     void EvaluateTokenMoveOptions()
     {
-        rowsPossible.Clear();
-        columnsPossible.Clear();
+        cellsPossible.Clear();
+
         if (activeToken != null)
         {
-            rowsPossible.Add(activeToken.Row + (1 * (activeToken.Direction == Direction.Down ? 1 : -1)));
+            List<int> rowsPossible = new();
 
-            columnsPossible.Add(activeToken.Column - 1);
-            columnsPossible.Add(activeToken.Column + 1);
+            switch (activeToken.Direction)
+            {
+                case Direction.Both:
+                    rowsPossible.Add(activeToken.Row + 1);
+                    rowsPossible.Add(activeToken.Row - 1);
+                    break;
+                case Direction.Up:
+                    rowsPossible.Add(activeToken.Row - 1);
+                    break;
+                case Direction.Down:
+                    rowsPossible.Add(activeToken.Row + 1);
+                    break;
+                default:
+                    break;
+            }
+
+            foreach (int row in rowsPossible)
+            {
+                EvaluateMove(row, activeToken.Column - 1);
+                EvaluateMove(row, activeToken.Column + 1);
+            }
+        }
+    }
+
+    void EvaluateMove(int row, int column, bool circuitBreaker = false)
+    {
+        Token blackToken = blackTokens.FirstOrDefault(x => x.Column == column && x.Row == row);
+        Token whiteToken = whiteTokens.FirstOrDefault(x => x.Column == column && x.Row == row);
+
+        if (blackToken == null && whiteToken == null)
+        {
+            cellsPossible.Add((row, column));
+        }
+        else if (!circuitBreaker)
+        {
+            // Jump token
+            if (activeTurn == Color.White && blackToken != null ||
+                activeTurn == Color.Black && whiteToken != null)
+            {
+                int columnDifference = column - activeToken.Column;
+                int rowDifference = row -activeToken.Row;
+
+                EvaluateMove(row + rowDifference, column + columnDifference, true);
+            }
         }
     }
 
     void MoveToken(int row, int column)
     {
-        bool canMoveHere = rowsPossible.Contains(row) && columnsPossible.Contains(column);
+        bool canMoveHere = cellsPossible.Contains((row, column));
 
         if (!canMoveHere)
         {
@@ -89,9 +134,64 @@
         }
         else
         {
+            if (activeToken.Row == 0 && activeToken.Color == Color.White)
+            {
+                activeToken.Direction = Direction.Both;
+            }
+
+            if (activeToken.Row == 7 && activeToken.Color == Color.Black)
+            {
+                activeToken.Direction = Direction.Both;
+            }
+
+            if (Math.Abs(activeToken.Column - column) == 2)
+            {
+                // killed a token
+                int jumpedColumn = (activeToken.Column + column) / 2;
+                int jumpedRow = (activeToken.Row + row) / 2;
+                Token blackToken = blackTokens.FirstOrDefault(x => x.Column == jumpedColumn && x.Row == jumpedRow);
+
+                if (blackToken != null)
+                {
+                    blackTokens.Remove(blackToken);
+                    beatenBlackToken++;
+                }
+
+                Token whiteToken = whiteTokens.FirstOrDefault(x => x.Column == jumpedColumn && x.Row == jumpedRow);
+
+                if (whiteToken != null)
+                {
+                    whiteTokens.Remove(whiteToken);
+                    beatenWhiteToken++;
+                }
+            }
+
             activeToken.Column = column;
             activeToken.Row = row;
+            activeTurn = 1 - activeTurn;
             activeToken = null;
+            EvaluateTokenMoveOptions();
         }
+    }
+
+    void OnClickToken(Token token)
+    {
+        if (activeTurn == Color.White && token.Color == Color.Black)
+        {
+            return;
+        }
+
+        if (activeTurn == Color.Black && token.Color == Color.White)
+        {
+            return;   
+        }
+
+        if (activeTurn == Color.White)
+        {
+            turnCount++;
+        }
+
+        activeToken = token;
+        EvaluateTokenMoveOptions();
     }
 }

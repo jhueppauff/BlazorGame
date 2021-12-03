@@ -4,9 +4,10 @@
     padding: 10px;
     border: 1.5px solid black;
 }
-.cell.active {
-    border: 3px solid orange;
-}
+
+    .cell.active {
+        border: 3px solid orange;
+    }
 
 .row:nth-child(2n) .cell:nth-child(2n+1) {
     background: tan
@@ -31,12 +32,19 @@
     border: 1px solid black;
 }
 
+    .token span {
+        text-align: center;
+        margin-top: 10px;
+        display: block;
+    }
+
     .token.active {
         border: 3px solid orange;
     }
 
     .token.Black {
         background: #000;
+        color: #fff
     }
 
     .token.White {

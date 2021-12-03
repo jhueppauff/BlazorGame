@@ -2,6 +2,7 @@
 {
     public enum Color
     {
-        Black, White
+        Black = 0, 
+        White = 1
     }
 }
